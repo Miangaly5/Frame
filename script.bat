@@ -1,29 +1,25 @@
-@REM lib avy ao amn working dir 
-set lib-dir="E:/DOCUMENT_NANCY/S4/Mr Naina/new_project/Test/lib"
+mkdir "mybin"
+set mybin="D:\DOCUMENT_NANCY\S4\Mr Naina\Sprint\fw\mybin"
+set ref="D:\DOCUMENT_NANCY\S4\Mr Naina\Sprint\fw\lib\*"
 
-@REM fichier de configuration avy ao amn working dir
-set web-xml="E:/DOCUMENT_NANCY/S4/Mr Naina/new_project/Test/conf"
+@REM Compilation des fichiers dans le répertoire src et ses sous-répertoires
+for /r ".\src" %%f in (*.java) do (
+   copy "%%f" "mybin\%%~nf.java"
+)
+cd mybin
+javac -cp %ref% -d "../mybin" *.java
+for /r "." %%f in (*.java) do (
+   del "%%f" 
+)
+cd .. 
 
-@REM nom du projet
-set target-name=my_frame
+@REM Définition des chemins
+set bin="D:\DOCUMENT_NANCY\S4\Mr Naina\Sprint\fw\bin"
+set mylib="D:\DOCUMENT_NANCY\S4\Mr Naina\Sprint\Test\lib"
+set jar=sprint0.jar
 
-@REM webapps chemin farany hi-deployena ny projet
-set target-dir="C:\Program Files\Apache Software Foundation\Tomcat 10.1\webapps"
+@REM Création du fichier JAR
+jar -cvf %jar% -C %mybin% .
 
-rmdir /q/s "temp"
-mkdir "temp/WEB-INF/classes"
-mkdir "temp/WEB-INF/lib"
-
-@REM copie du fichier de configuration et du fichier jar dans temp
-echo D | xcopy /q/s/y %web-xml% "temp/WEB-INF"
-echo D | xcopy /q/s/y %lib-dir% "temp/WEB-INF/lib"
-
-@REM creation du fichier war
-jar -cvf %target-name%.war -C temp/ . 
-
-xcopy /q/y %target-name%.war %target-dir%
-
-del %target-name%.war
-rmdir /q/s "temp"
-
-echo Done
+echo D | xcopy /q/y %jar% %mylib%
+@echo Done
