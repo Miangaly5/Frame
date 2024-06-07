@@ -86,7 +86,7 @@ public class FrontController extends HttpServlet {
         // Récupération du nom de contrôleur et de la méthode
         String controllerName = mapping.getClassName();
         String methodName = mapping.getMethodName();
-
+      main
         try {
             // Instanciation du contrôleur
             Class<?> controllerClass = Class.forName(controllerName);
@@ -121,6 +121,14 @@ public class FrontController extends HttpServlet {
                 resp.setContentType("text/html");
                 out.println("<p>Non reconnu</p><br>");
             }
+            // Affichage du résultat
+            resp.setContentType("text/html");
+            out.println("<h1>Sprint 3 </h1><br>");
+            out.println("<p>Lien : " + url + "</p>");
+            out.println("<p>Contrôleur : " + controllerName + "</p>");
+            out.println("<p>Méthode : " + methodName + "</p>");
+            out.println("<p>Résultat : " + result + "</p>");
+          main
         }
         catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
             throw new ServletException("Erreur lors de l'exécution de la méthode", e);
