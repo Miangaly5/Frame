@@ -1,10 +1,14 @@
 package controller;
 
+import annotation.Get;
+import modele.Mapping;
+import modele.ListClass;
+
+import java.util.HashMap;
+import java.util.ArrayList;
 import java.io.IOException;
 import java.io.PrintWriter;
-
-import modele.*;
-import java.util.*;
+import java.lang.reflect.Method;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -12,16 +16,47 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public class FrontController extends HttpServlet {
-    ArrayList<Class<?>> classes;
+ HashMap<String, Mapping> urlMappings = new HashMap<>();
+ ArrayList<Class<?>> controllers;
 
-    public ArrayList<Class<?>> getClasses() {
-        return classes;
-    }
-    public void setClasses(ArrayList<Class<?>> classes) {
-        this.classes = classes;
+    // getter et setter
+    public ArrayList<Class<?>> getControllers() {
+        return controllers;
     }
 
-    boolean scanned = false;
+    public void setControllers(ArrayList<Class<?>> controllers) {
+        this.controllers = controllers;
+    }
+
+    @Override
+    public void init() throws ServletException{
+        super.init();
+        // récupérer la liste des contrôleurs
+        String packageName = this.getInitParameter("Package_Controller");
+        try {
+            this.setControllers(ListClass.getAllClasses(packageName));
+
+            // itérer les contrôleurs et récupérer les méthodes annotées par @Get
+            for (Class<?> controller : this.getControllers()) {
+                for (Method method : controller.getDeclaredMethods()) {
+                    if (method.isAnnotationPresent(Get.class)) {
+                       //nom_classe et nom_methode
+                        String className = controller.getName();
+                        String methodName = method.getName();
+
+                        //@Get value
+                        Get getAnnotation = method.getAnnotation(Get.class);
+                        String url = getAnnotation.value();
+
+                        Mapping mapping = new Mapping(className, methodName);
+                        urlMappings.put(url, mapping); //add dans HashMap
+                    }
+                }
+            }
+        } catch (ClassNotFoundException | IOException e) {
+            throw new ServletException("Erreur lors du scan des contrôleurs", e);
+        }
+    }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -32,29 +67,28 @@ public class FrontController extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         processRequest(req, resp);
     }
-
+    
     private void processRequest(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-       String url = req.getRequestURI();
-       PrintWriter out = resp.getWriter();
-       String packageName = this.getInitParameter("Controller_Package");
+        String url = req.getServletPath();
+    
+        PrintWriter out = resp.getWriter();
+        // Check URL
+        Mapping mapping = urlMappings.get(url);
+        if (mapping == null) {
+            resp.setContentType("text/html");
+            out.println("<h1>Erreur: L'URL demandée n'est pas disponible!</h1>");
+            return;
+        }
+    
+        // Récupération du nom de contrôleur et de la méthode
+        String controllerName = mapping.getClassName();
+        String methodName = mapping.getMethodName();
 
-       // Vérifier si les contrôleurs ont déjà été scannés
-       if (!scanned) {
-           // Scanner les contrôleurs et stocker la liste dans l'attribut
-           try {
-               this.setClasses(ListClasse.getControllerClasses(packageName));
-               scanned = true;
-           } catch (ClassNotFoundException | IOException e) {
-               throw new ServletException("Erreur lors du scan des contrôleurs", e);
-           }
-       }
-
-       out.println("Bienvenue dans le test de Sprint 0. URL : " + url);
-       out.println("<br>Liste des contrôleurs :");
-       out.println("<ul>");
-       for (Class<?> controller : this.getClasses()) {
-           out.println("<li>" + controller.getName() + "</li>");
-       }
-       out.println("</ul>");
+        resp.setContentType("text/html");
+        out.println("<h1>Sprint 2</h1><br>");
+        out.println("<p>Lien : " + url + "</p>");
+        out.println("<p>Contrôleur : " + controllerName + "</p>");
+        out.println("<p>Méthode : " + methodName + "</p>");
     }
+
 }
