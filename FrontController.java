@@ -84,7 +84,6 @@ public class FrontController extends HttpServlet {
         // Récupération du nom de contrôleur et de la méthode
         String controllerName = mapping.getClassName();
         String methodName = mapping.getMethodName();
-
         try {
             // Instanciation du contrôleur
             Class<?> controllerClass = Class.forName(controllerName);
