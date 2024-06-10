@@ -3,6 +3,7 @@ package controller;
 import annotation.Get;
 import modele.Mapping;
 import modele.ListClass;
+import modele.ModelView;
 
 import java.util.HashMap;
 import java.util.ArrayList;
@@ -34,6 +35,9 @@ public class FrontController extends HttpServlet {
         super.init();
         // récupérer la liste des contrôleurs
         String packageName = this.getInitParameter("Package_Controller");
+        if (packageName == null || packageName.isEmpty()) {
+            throw new ServletException("Le paramètre 'Package_Controller' est manquant ou vide");
+        }
         try {
             this.setControllers(ListClass.getAllClasses(packageName));
 
@@ -48,13 +52,16 @@ public class FrontController extends HttpServlet {
                         //@Get value
                         Get getAnnotation = method.getAnnotation(Get.class);
                         String url = getAnnotation.value();
-
+                        if(urlMappings.containsKey(url)) {
+                            throw new ServletException("URL en double détectée: " + url + " pour " + className + "#" + methodName);
+                        }
                         Mapping mapping = new Mapping(className, methodName);
                         urlMappings.put(url, mapping); //add dans HashMap
                     }
                 }
             }
-        } catch (ClassNotFoundException | IOException e) {
+        }
+        catch (ClassNotFoundException | IOException e) {
             throw new ServletException("Erreur lors du scan des contrôleurs", e);
         }
     }
@@ -84,6 +91,7 @@ public class FrontController extends HttpServlet {
         // Récupération du nom de contrôleur et de la méthode
         String controllerName = mapping.getClassName();
         String methodName = mapping.getMethodName();
+
         try {
             // Instanciation du contrôleur
             Class<?> controllerClass = Class.forName(controllerName);
@@ -96,13 +104,28 @@ public class FrontController extends HttpServlet {
             // Exécution de la méthode et récupération du résultat
             Object result = method.invoke(controllerInstance);
             
-            // Affichage du résultat
-            resp.setContentType("text/html");
-            out.println("<h1>Sprint 3 </h1><br>");
-            out.println("<p>Lien : " + url + "</p>");
-            out.println("<p>Contrôleur : " + controllerName + "</p>");
-            out.println("<p>Méthode : " + methodName + "</p>");
-            out.println("<p>Résultat : " + result + "</p>");
+            if(result instanceof ModelView) {
+                ModelView modelView = (ModelView)result;
+                String urlView = modelView.getUrl();
+                HashMap<String, Object> data = modelView.getData();
+                for(String key : data.keySet()) {
+                    req.setAttribute(key,data.get(key));
+                }
+                req.getRequestDispatcher(urlView).forward(req, resp);
+            }
+            else if(result instanceof String) {
+                // Affichage du résultat
+                resp.setContentType("text/html");
+                out.println("<h1>Sprint 4</h1><br>");
+                out.println("<p>Lien : " + url + "</p>");
+                out.println("<p>Contrôleur : " + controllerName + "</p>");
+                out.println("<p>Méthode : " + methodName + "</p>");
+                out.println("<p>Résultat : " + result.toString() + "</p>");
+            }
+            else {
+                resp.setContentType("text/html");
+                out.println("<p>Non reconnu</p><br>");
+            }
         }
         catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
             throw new ServletException("Erreur lors de l'exécution de la méthode", e);
