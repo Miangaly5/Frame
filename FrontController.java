@@ -35,6 +35,9 @@ public class FrontController extends HttpServlet {
         super.init();
         // récupérer la liste des contrôleurs
         String packageName = this.getInitParameter("Package_Controller");
+        if (packageName == null || packageName.isEmpty()) {
+            throw new ServletException("Le paramètre 'Package_Controller' est manquant ou vide");
+        }
         try {
             this.setControllers(ListClass.getAllClasses(packageName));
 
@@ -49,7 +52,9 @@ public class FrontController extends HttpServlet {
                         //@Get value
                         Get getAnnotation = method.getAnnotation(Get.class);
                         String url = getAnnotation.value();
-
+                        if(urlMappings.containsKey(url)) {
+                            throw new ServletException("URL en double détectée: " + url + " pour " + className + "#" + methodName);
+                        }
                         Mapping mapping = new Mapping(className, methodName);
                         urlMappings.put(url, mapping); //add dans HashMap
                     }
@@ -86,6 +91,7 @@ public class FrontController extends HttpServlet {
         // Récupération du nom de contrôleur et de la méthode
         String controllerName = mapping.getClassName();
         String methodName = mapping.getMethodName();
+      main
       main
         try {
             // Instanciation du contrôleur
@@ -128,6 +134,7 @@ public class FrontController extends HttpServlet {
             out.println("<p>Contrôleur : " + controllerName + "</p>");
             out.println("<p>Méthode : " + methodName + "</p>");
             out.println("<p>Résultat : " + result + "</p>");
+          main
           main
         }
         catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
