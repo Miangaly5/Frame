@@ -2,7 +2,9 @@ package controller;
 
 import com.google.gson.Gson;
 
+import annotation.Url;
 import annotation.Get;
+import annotation.Post;
 import annotation.RestAPI;
 import modele.Mapping;
 import modele.ListClass;
@@ -47,18 +49,25 @@ public class FrontController extends HttpServlet {
             // itérer les contrôleurs et récupérer les méthodes annotées par @Get
             for (Class<?> controller : this.getControllers()) {
                 for (Method method : controller.getDeclaredMethods()) {
-                    if (method.isAnnotationPresent(Get.class)) {
+                    if (method.isAnnotationPresent(Url.class)) {
                        //nom_classe et nom_methode
                         String className = controller.getName();
                         String methodName = method.getName();
-
+                        String verb = "GET";
                         //@Get value
-                        Get getAnnotation = method.getAnnotation(Get.class);
+                        // Get getAnnotation = method.getAnnotation(Get.class);
+                        Url getAnnotation = method.getAnnotation(Url.class);
                         String url = getAnnotation.value();
+                        if(method.isAnnotationPresent(Get.class)) {
+                            verb = "GET";
+                        }
+                        else if(method.isAnnotationPresent(Post.class)) {
+                            verb = "POST";
+                        }
                         if(urlMappings.containsKey(url)) {
                             throw new ServletException("URL en double détectée: " + url + " pour " + className + "#" + methodName);
                         }
-                        Mapping mapping = new Mapping(className, methodName);
+                        Mapping mapping = new Mapping(className, methodName, verb);
                         urlMappings.put(url, mapping); //add dans HashMap
                     }
                 }
@@ -103,6 +112,13 @@ public class FrontController extends HttpServlet {
         // Récupération du nom de contrôleur et de la méthode
         String controllerName = mapping.getClassName();
         String methodName = mapping.getMethodName();
+        String requestedVerb = req.getMethod();
+        String verb = mapping.getVerb();
+        if (!requestedVerb.equalsIgnoreCase(verb)) {
+            resp.setContentType("text/html");
+            out.println("<h2>Erreur: Le verbe HTTP " + requestedVerb + " ne correspond pas à l'annotation " + mapping.getVerb() + " pour " + mapping.getClassName() + "#" + mapping.getMethodName() + "</h2>");
+            return;
+        }
 
         try {
             // Instanciation du contrôleur
