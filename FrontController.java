@@ -1,6 +1,9 @@
 package controller;
 
+import com.google.gson.Gson;
+
 import annotation.Get;
+import annotation.RestAPI;
 import modele.Mapping;
 import modele.ListClass;
 import modele.ModelView;
@@ -10,7 +13,6 @@ import java.util.ArrayList;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
 import java.lang.reflect.InvocationTargetException;
 
 import jakarta.servlet.ServletException;
@@ -69,17 +71,26 @@ public class FrontController extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        processRequest(req, resp);
+        try {
+            processRequest(req, resp);
+        }
+        catch(Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        processRequest(req, resp);
+        try {
+            processRequest(req, resp);
+        }
+        catch(Exception e) {
+            e.printStackTrace();
+        }
     }
     
-    private void processRequest(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String url = req.getServletPath();
-    
+    private void processRequest(HttpServletRequest req, HttpServletResponse resp) throws Exception {
+        String url = req.getServletPath();    
         PrintWriter out = resp.getWriter();
         // Check URL
         Mapping mapping = urlMappings.get(url);
@@ -107,48 +118,67 @@ public class FrontController extends HttpServlet {
                     break;
                 }
             }
+            
             if(method == null) {
                 throw new NoSuchMethodException(controllerClass.getName() + "." + methodName + "()");
             }
             
             // Exécution de la méthode et récupération du résultat
             Object result;
-            Parameter[] parameters = method.getParameters();
-            if(parameters.length > 0) {
-                ArrayList<Object> values = ListClass.parameterMethod(method, req);
-                if(values.size() != parameters.length) {
-                    throw new IllegalArgumentException("Nombre d'arguments incorrect pour la méthode " + method);
+            if(method.getParameterCount() > 0) {
+                ArrayList<Object> parameterValues = ListClass.getParameterValuesCombined(method, req);
+                if (parameterValues.size() != method.getParameterCount()) {
+                    throw new IllegalArgumentException("Nombre d'argument incorrect pour la methode" + method);
                 }
-                result = method.invoke(controllerInstance, values.toArray());
+                result = method.invoke(controllerInstance,parameterValues.toArray());
             }
-            else {
+            else{
                 result = method.invoke(controllerInstance);
             }
-        
-            if(result instanceof ModelView) {
-                ModelView modelView = (ModelView)result;
-                String urlView = modelView.getUrl();
-                HashMap<String, Object> data = modelView.getData();
-                for(String key : data.keySet()) {
-                    req.setAttribute(key,data.get(key));
+            boolean isRestAPI = method.isAnnotationPresent(RestAPI.class);
+            if(isRestAPI) {
+                // La méthode est annotée avec @RestApi, on traite le résultat en JSON
+                resp.setContentType("application/json");
+                if (result instanceof ModelView) {
+                    // Transformer le 'data' du ModelView en JSON
+                    ModelView modelView = (ModelView) result;
+                    HashMap<String, Object> data = modelView.getData();
+                    String json = new Gson().toJson(data);
+                    out.print(json);
+                } else {
+                    // Transformer directement le résultat en JSON
+                    String json = new Gson().toJson(result);
+                    out.print(json);
                 }
-                req.getRequestDispatcher(urlView).forward(req, resp);
-            }
-            else if(result instanceof String) {
-                // Affichage du résultat
-                resp.setContentType("text/html");
-                out.println("<h1>Sprint 4</h1><br>");
-                out.println("<p>Lien : " + url + "</p>");
-                out.println("<p>Contrôleur : " + controllerName + "</p>");
-                out.println("<p>Méthode : " + methodName + "</p>");
-                out.println("<p>Résultat : " + result.toString() + "</p>");
             }
             else {
-                throw new ServletException("Le type de retour de la méthode est invalide");
+                if(result instanceof ModelView) {
+                    ModelView modelView = (ModelView)result;
+                    String urlView = modelView.getUrl();
+                    HashMap<String, Object> data = modelView.getData();
+                    for(String key : data.keySet()) {
+                        req.setAttribute(key,data.get(key));
+                    }
+                    req.getRequestDispatcher(urlView).forward(req, resp);
+                }
+                else if(result instanceof String) {
+                    // Affichage du résultat
+                    resp.setContentType("text/html");
+                    out.println("<h1>Sprint 4</h1><br>");
+                    out.println("<p>Lien : " + url + "</p>");
+                    out.println("<p>Contrôleur : " + controllerName + "</p>");
+                    out.println("<p>Méthode : " + methodName + "</p>");
+                    out.println("<p>Résultat : " + result.toString() + "</p>");
+                }
+                else {
+                    throw new ServletException("Le type de retour de la méthode est invalide");
+                }
             }
         }
         catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
             throw new ServletException("Erreur lors de l'exécution de la méthode", e);
+        } catch (Exception e){
+            out.println(e.getLocalizedMessage());
         }
     }
 
