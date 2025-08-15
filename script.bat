@@ -1,16 +1,16 @@
 @REM Définition des chemins existants
 @REM Les fichiers compilés
-set bin-dir="D:\Documents\S4\Mr Naina\Sprint\Sprint_Nouveau\fw\bin"
+set bin-dir="D:\Documents\S4\Mr Naina\Sprint\Frame\bin"
 @REM Librairies nécessaires
-set lib-dir="D:\Documents\S4\Mr Naina\Sprint\Sprint_Nouveau\fw\lib\*"
+set lib-dir="D:\Documents\S4\Mr Naina\Sprint\Frame\lib\*"
 @REM Codes source du framework
-set src-dir="D:\Documents\S4\Mr Naina\Sprint\Sprint_Nouveau\fw\src"
+set src-dir="D:\Documents\S4\Mr Naina\Sprint\Frame\src"
 @REM Librairies de l'utilisateur
 set target-lib-dir="D:\Documents\S4\Mr Naina\Sprint\Sprint_Nouveau\Test\lib"
 
 @REM Création d'un dossier temporaire pour stocker les fichiers .java
 mkdir temp
-set temp="D:\Documents\S4\Mr Naina\Sprint\Sprint_Nouveau\fw\temp"
+set temp="D:\Documents\S4\Mr Naina\Sprint\Frame\temp"
 
 @REM Copie des fichiers .java dans un même répertoire
 for /r %src-dir% %%f in (*.java) do (
@@ -30,6 +30,9 @@ echo D | xcopy /q/y %jar% %target-lib-dir%
 
 @REM Suppression du dossier temporaire
 rmdir /q/s "temp"
+
+@REM Suppression du fichier jar
+del /q "sprint0.jar"
 
 @REM Fin du script
 @echo Done
