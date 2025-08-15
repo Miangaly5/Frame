@@ -1,29 +1,38 @@
-@REM lib avy ao amn working dir 
-set lib-dir="E:/DOCUMENT_NANCY/S4/Mr Naina/new_project/Test/lib"
+@REM Définition des chemins existants
+@REM Les fichiers compilés
+set bin-dir="D:\Documents\S4\Mr Naina\Sprint\Frame\bin"
+@REM Librairies nécessaires
+set lib-dir="D:\Documents\S4\Mr Naina\Sprint\Frame\lib\*"
+@REM Codes source du framework
+set src-dir="D:\Documents\S4\Mr Naina\Sprint\Frame\src"
+@REM Librairies de l'utilisateur
+set target-lib-dir="D:\Documents\S4\Mr Naina\Sprint\Sprint_Nouveau\Test\lib"
 
-@REM fichier de configuration avy ao amn working dir
-set web-xml="E:/DOCUMENT_NANCY/S4/Mr Naina/new_project/Test/conf"
+@REM Création d'un dossier temporaire pour stocker les fichiers .java
+mkdir temp
+set temp="D:\Documents\S4\Mr Naina\Sprint\Frame\temp"
 
-@REM nom du projet
-set target-name=my_frame
+@REM Copie des fichiers .java dans un même répertoire
+for /r %src-dir% %%f in (*.java) do (
+   copy "%%f" %temp%
+)
 
-@REM webapps chemin farany hi-deployena ny projet
-set target-dir="C:\Program Files\Apache Software Foundation\Tomcat 10.1\webapps"
+@REM Compilation des fichiers .java et les stockés dans le dossier classes
+javac -parameters -cp %lib-dir% -d %bin-dir% %temp%\*.java
 
+@REM Création du fichier JAR
+set jar=sprint0.jar
+jar -cvf %jar% -C %bin-dir% .
+
+@REM Copie des librairies nécessaire pour le côté utilisateur
+echo D | xcopy /q/y %lib-dir% %target-lib-dir%
+echo D | xcopy /q/y %jar% %target-lib-dir%
+
+@REM Suppression du dossier temporaire
 rmdir /q/s "temp"
-mkdir "temp/WEB-INF/classes"
-mkdir "temp/WEB-INF/lib"
 
-@REM copie du fichier de configuration et du fichier jar dans temp
-echo D | xcopy /q/s/y %web-xml% "temp/WEB-INF"
-echo D | xcopy /q/s/y %lib-dir% "temp/WEB-INF/lib"
+@REM Suppression du fichier jar
+del /q "sprint0.jar"
 
-@REM creation du fichier war
-jar -cvf %target-name%.war -C temp/ . 
-
-xcopy /q/y %target-name%.war %target-dir%
-
-del %target-name%.war
-rmdir /q/s "temp"
-
-echo Done
+@REM Fin du script
+@echo Done
