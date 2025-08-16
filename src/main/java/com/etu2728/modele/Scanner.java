@@ -5,10 +5,13 @@ import java.io.File;
 import java.util.ArrayList;
 
 import main.java.com.etu2728.annotation.Param;
+import main.java.com.etu2728.annotation.ParamObject;
+
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 
@@ -55,6 +58,24 @@ public class Scanner {
         return result;
     }
     
+    public static Object processObjectParam(Class<?> classe, String paramObjectName, HttpServletRequest request) throws IllegalArgumentException, IllegalAccessException, Exception {
+        Object object = classe.getDeclaredConstructor().newInstance();
+
+        for (Field attribut : classe.getDeclaredFields()) {
+            attribut.setAccessible(true);
+            String paramName = attribut.getName();
+            String paramValue = request.getParameter(paramObjectName + "." + paramName);
+            if (paramValue != null) {
+                attribut.set(object, convertValue(attribut.getType(), paramValue));
+            }
+            else {
+                throw new IllegalArgumentException("L'attribut' " + paramName + " de la classe " + classe.getName() + " est null!");
+            }
+        }
+
+        return object;
+    }
+    
     private static Object convertValue(Class<?> type, String value) throws Exception {
         if (type.equals(String.class)) {
             return value;
@@ -84,25 +105,32 @@ public class Scanner {
         Parameter[] parameters = method.getParameters();
         
         for (Parameter parameter : parameters) {
-            String value = null;
+            Object value = null;
     
-            if (parameter.isAnnotationPresent(Param.class)) {
+            if (parameter.isAnnotationPresent(ParamObject.class)) {
+                ParamObject paramObject = parameter.getAnnotation(ParamObject.class);
+                String paramObjectName = paramObject.value();
+
+                value = processObjectParam(parameter.getType(), paramObjectName, request);
+            } else if (parameter.isAnnotationPresent(Param.class)) {
                 Param paramAnnotation = parameter.getAnnotation(Param.class);
                 String paramName = paramAnnotation.name();
-                value = request.getParameter(paramName);
+                String paramValue = request.getParameter(paramName);
+
+                value = convertValue(parameter.getType(), paramValue);
             } else {
                 // Si l'annotation @Param n'est pas présente, on prend le nom du paramètre
                 String paramName = parameter.getName();
-                value = request.getParameter(paramName);
+                String paramValue = request.getParameter(paramName);
+                
+                value = convertValue(parameter.getType(), paramValue);
             }
     
             if (value == null) {
                 throw new IllegalArgumentException("Paramètre manquant ou invalide: " + parameter.getName());
             }
-    
-            // Conversion du type du paramètre
-            Object convertedValue = convertValue(parameter.getType(), value);
-            parameterValues.add(convertedValue);
+
+            parameterValues.add(value);
         }
         
         return parameterValues;
