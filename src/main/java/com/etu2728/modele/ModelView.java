@@ -1,13 +1,17 @@
-package modele;
+package main.java.com.etu2728.modele;
 
 import java.util.HashMap;
 
 public class ModelView {
     String url;
     HashMap<String, Object> data;
-
+    
     public ModelView() {
-        this.data = new HashMap<String, Object>();
+        this.data = new HashMap<>();
+    }
+    public ModelView(String url) {
+        this.url = "view/" + url;
+        this.data = new HashMap<>();
     }
     public ModelView(String url, HashMap<String, Object> data) {
         this.url = url;
@@ -18,7 +22,7 @@ public class ModelView {
         return url;
     }
     public void setUrl(String url) {
-        this.url = url;
+        this.url = "view/" + url;
     }
     public HashMap<String, Object> getData() {
         return data;
@@ -26,7 +30,8 @@ public class ModelView {
     public void setData(HashMap<String, Object> data) {
         this.data = data;
     }
-    public void addObject(String cle, Object valeur){
-        this.data.put(cle, valeur);
+    
+    public void addObject(String key, Object value) {
+        this.data.put(key, value);
     }
 }
