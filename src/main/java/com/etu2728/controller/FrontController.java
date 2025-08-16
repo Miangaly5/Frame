@@ -6,10 +6,11 @@ import main.java.com.etu2728.modele.ModelView;
 import main.java.com.etu2728.annotation.Get;
 import main.java.com.etu2728.annotation.Controller;
 
+import java.util.HashMap;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
-import java.util.HashMap;
+import java.lang.reflect.InvocationTargetException;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -20,11 +21,11 @@ public class FrontController extends HttpServlet {
     HashMap<String, Mapping> urlMappings = new HashMap<>();
     
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
         processRequest(req, resp);
     }
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
         processRequest(req, resp);
     }
 
@@ -33,6 +34,11 @@ public class FrontController extends HttpServlet {
         super.init();
         // récupérer la liste des contrôleurs
         String packageName = this.getInitParameter("packageController");
+        
+        if (packageName == null || packageName.isEmpty()) {
+            throw new ServletException("Le package 'packageController' est vide");
+        }
+
         try {
             for (Class<?> controller: Scanner.getControllerClasses(packageName, Controller.class)) {
                 for (Method method : controller.getMethods()) {
@@ -43,6 +49,10 @@ public class FrontController extends HttpServlet {
                         Get getAnnotation = method.getAnnotation(Get.class);
                         String url = getAnnotation.value();
 
+                        if (urlMappings.containsKey(url)) {
+                            throw new ServletException("URL en double détectée: " + url);
+                        }
+
                         Mapping mapping = new Mapping(className, methodName);
                         
                         urlMappings.put(url, mapping);
@@ -50,19 +60,17 @@ public class FrontController extends HttpServlet {
                 }
             }
         } catch (ClassNotFoundException | IOException e) {
-            e.printStackTrace();
+            throw new ServletException("Erreur lors du scan des contrôleurs", e);
         }
     }
 
-    private void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    private void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
         String url = req.getServletPath();
         PrintWriter out = resp.getWriter();
 
         Mapping mapping = urlMappings.get(url);
         if (mapping == null) {
-            resp.setContentType("text/html");
-            out.println("<h1>Erreur: Il n'y a pas de méthode associé à ce chemin!</h1>");
-            return;
+            throw new ServletException("Aucune methode associe a ce chemin");
         }
 
         String controllerName = mapping.getClassName();
@@ -95,12 +103,11 @@ public class FrontController extends HttpServlet {
                 req.getRequestDispatcher(urlView).forward(req, resp);
             }
             else {
-                resp.setContentType("text/html");
-                out.println("<p>Non reconnu</p><br>");
+                throw new ServletException("Type de retour invalide");
             }
 
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
+            throw new ServletException("Erreur lors de l'execution de la methode", e);
         }
     }
 
