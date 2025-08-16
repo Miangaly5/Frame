@@ -2,6 +2,7 @@ package main.java.com.etu2728.controller;
 
 import main.java.com.etu2728.modele.Scanner;
 import main.java.com.etu2728.modele.Mapping;
+import main.java.com.etu2728.modele.ModelView;
 import main.java.com.etu2728.annotation.Get;
 import main.java.com.etu2728.annotation.Controller;
 
@@ -74,12 +75,29 @@ public class FrontController extends HttpServlet {
             Method method = controllerClass.getMethod(methodeName);
             Object result = method.invoke(controllerInstance);
 
-            resp.setContentType("text/html");
-            out.println("<h1>Sprint 3</h1>");
-            out.println("<p><b>Lien: </b>" + url + "</p>");
-            out.println("<p><b>Contrôleur: </b>" + controllerName + "</p>");
-            out.println("<p><b>Méthode: </b>" + methodeName + "</p>");
-            out.println("<p><b>Résultat: </b>" + result + "</p>");
+            if (result instanceof String) {
+                resp.setContentType("text/html");
+                out.println("<h1>Sprint 3</h1>");
+                out.println("<p><b>Lien: </b>" + url + "</p>");
+                out.println("<p><b>Contrôleur: </b>" + controllerName + "</p>");
+                out.println("<p><b>Méthode: </b>" + methodeName + "</p>");
+                out.println("<p><b>Résultat: </b>" + result + "</p>");
+            }
+            else if (result instanceof ModelView) {
+                ModelView modelView = (ModelView)result;
+                String urlView = modelView.getUrl();
+                HashMap<String, Object> data = modelView.getData();
+
+                for (String key : data.keySet()) {
+                    req.setAttribute(key, data.get(key));
+                }
+
+                req.getRequestDispatcher(urlView).forward(req, resp);
+            }
+            else {
+                resp.setContentType("text/html");
+                out.println("<p>Non reconnu</p><br>");
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
