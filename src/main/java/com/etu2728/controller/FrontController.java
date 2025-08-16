@@ -8,7 +8,10 @@ import main.java.com.etu2728.annotation.Controller;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import jakarta.servlet.ServletException;
@@ -20,12 +23,20 @@ public class FrontController extends HttpServlet {
     HashMap<String, Mapping> urlMappings = new HashMap<>();
     
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        processRequest(req, resp);
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
+        try {
+            processRequest(req, resp);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        processRequest(req, resp);
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
+        try {
+            processRequest(req, resp);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -33,6 +44,11 @@ public class FrontController extends HttpServlet {
         super.init();
         // récupérer la liste des contrôleurs
         String packageName = this.getInitParameter("packageController");
+        
+        if (packageName == null || packageName.isEmpty()) {
+            throw new ServletException("Le package 'packageController' est vide");
+        }
+
         try {
             for (Class<?> controller: Scanner.getControllerClasses(packageName, Controller.class)) {
                 for (Method method : controller.getMethods()) {
@@ -43,6 +59,10 @@ public class FrontController extends HttpServlet {
                         Get getAnnotation = method.getAnnotation(Get.class);
                         String url = getAnnotation.value();
 
+                        if (urlMappings.containsKey(url)) {
+                            throw new ServletException("URL en double détectée: " + url);
+                        }
+
                         Mapping mapping = new Mapping(className, methodName);
                         
                         urlMappings.put(url, mapping);
@@ -50,19 +70,17 @@ public class FrontController extends HttpServlet {
                 }
             }
         } catch (ClassNotFoundException | IOException e) {
-            e.printStackTrace();
+            throw new ServletException("Erreur lors du scan des contrôleurs", e);
         }
     }
 
-    private void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    private void processRequest(HttpServletRequest req, HttpServletResponse resp) throws Exception {
         String url = req.getServletPath();
         PrintWriter out = resp.getWriter();
 
         Mapping mapping = urlMappings.get(url);
         if (mapping == null) {
-            resp.setContentType("text/html");
-            out.println("<h1>Erreur: Il n'y a pas de méthode associé à ce chemin!</h1>");
-            return;
+            throw new ServletException("Aucune methode associe a ce chemin");
         }
 
         String controllerName = mapping.getClassName();
@@ -72,8 +90,28 @@ public class FrontController extends HttpServlet {
             Class<?> controllerClass = Class.forName(controllerName);
             @SuppressWarnings("deprecation")
             Object controllerInstance = controllerClass.newInstance();
-            Method method = controllerClass.getMethod(methodeName);
-            Object result = method.invoke(controllerInstance);
+            Method method = null;
+            for (Method m : controllerClass.getMethods()) {
+                if (m.getName().equals(methodeName)) {
+                    method = m;
+                    break;
+                }
+            }
+            if (method == null) {
+                throw new ServletException("Methode introuvable: " + methodeName);
+            }
+    
+            Object result;
+            Parameter[] parameters = method.getParameters();
+            if (parameters.length > 0) {
+                ArrayList<Object> values = Scanner.parameterMethod(method, req);
+                if (values.size() != parameters.length) {
+                    throw new ServletException("Nombre d'arguments incorrect pour la méthode " + method);
+                }
+                result = method.invoke(controllerInstance, values.toArray());
+            } else {
+                result = method.invoke(controllerInstance);
+            }
 
             if (result instanceof String) {
                 resp.setContentType("text/html");
@@ -95,12 +133,11 @@ public class FrontController extends HttpServlet {
                 req.getRequestDispatcher(urlView).forward(req, resp);
             }
             else {
-                resp.setContentType("text/html");
-                out.println("<p>Non reconnu</p><br>");
+                throw new ServletException("Type de retour invalide");
             }
 
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
+            throw new ServletException("Erreur lors de l'execution de la methode", e);
         }
     }
 
