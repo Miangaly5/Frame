@@ -6,11 +6,13 @@ import main.java.com.etu2728.modele.ModelView;
 import main.java.com.etu2728.annotation.Get;
 import main.java.com.etu2728.annotation.Controller;
 
-import java.util.HashMap;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -22,11 +24,19 @@ public class FrontController extends HttpServlet {
     
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
-        processRequest(req, resp);
+        try {
+            processRequest(req, resp);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
-        processRequest(req, resp);
+        try {
+            processRequest(req, resp);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -64,7 +74,7 @@ public class FrontController extends HttpServlet {
         }
     }
 
-    private void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
+    private void processRequest(HttpServletRequest req, HttpServletResponse resp) throws Exception {
         String url = req.getServletPath();
         PrintWriter out = resp.getWriter();
 
@@ -80,8 +90,28 @@ public class FrontController extends HttpServlet {
             Class<?> controllerClass = Class.forName(controllerName);
             @SuppressWarnings("deprecation")
             Object controllerInstance = controllerClass.newInstance();
-            Method method = controllerClass.getMethod(methodeName);
-            Object result = method.invoke(controllerInstance);
+            Method method = null;
+            for (Method m : controllerClass.getMethods()) {
+                if (m.getName().equals(methodeName)) {
+                    method = m;
+                    break;
+                }
+            }
+            if (method == null) {
+                throw new ServletException("Methode introuvable: " + methodeName);
+            }
+    
+            Object result;
+            Parameter[] parameters = method.getParameters();
+            if (parameters.length > 0) {
+                ArrayList<Object> values = Scanner.parameterMethod(method, req);
+                if (values.size() != parameters.length) {
+                    throw new ServletException("Nombre d'arguments incorrect pour la méthode " + method);
+                }
+                result = method.invoke(controllerInstance, values.toArray());
+            } else {
+                result = method.invoke(controllerInstance);
+            }
 
             if (result instanceof String) {
                 resp.setContentType("text/html");
