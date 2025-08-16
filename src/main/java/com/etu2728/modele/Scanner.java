@@ -2,6 +2,7 @@ package main.java.com.etu2728.modele;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.net.URL;
 import java.util.ArrayList;
 
@@ -30,6 +31,22 @@ public class Scanner {
         }
 
         return classes;
+    }
+
+    public static ArrayList<Class<?>> getControllerClasses(String packageName,
+            Class<? extends Annotation> annotationController)
+            throws ClassNotFoundException, IOException {
+        ArrayList<Class<?>> classes = getAllClasses(packageName);
+
+        ArrayList<Class<?>> result = new ArrayList<Class<?>>();
+
+        for (Class<?> classe : classes) {
+            if (classe.isAnnotationPresent(annotationController)) {
+                result.add(classe);
+            }
+        }
+
+        return result;
     }
 
 }

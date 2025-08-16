@@ -1,11 +1,14 @@
 package main.java.com.etu2728.controller;
 
+import main.java.com.etu2728.modele.Mapping;
 import main.java.com.etu2728.modele.Scanner;
+import main.java.com.etu2728.annotation.Get;
 import main.java.com.etu2728.annotation.Controller;
 
+import java.util.HashMap;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
+import java.lang.reflect.Method;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -13,15 +16,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public class FrontController extends HttpServlet {
-    ArrayList<Class<?>> controllers;
-    Boolean isScanned = false;
-
-    public ArrayList<Class<?>> getControllers() {
-        return controllers;
-    }
-    public void setControllers(ArrayList<Class<?>> controllers) {
-        this.controllers = controllers;
-    }
+    HashMap<String, Mapping> urlMappings = new HashMap<>();
     
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -38,11 +33,19 @@ public class FrontController extends HttpServlet {
         // récupérer la liste des contrôleurs
         String packageName = this.getInitParameter("packageController");
         try {
-            controllers = new ArrayList<Class<?>>();
-            for (Class<?> classe : Scanner.getAllClasses(packageName)) {
-                if (classe.isAnnotationPresent(Controller.class)) {
-                    this.getControllers().add(classe);
-                    isScanned = true;
+            for (Class<?> controller: Scanner.getControllerClasses(packageName, Controller.class)) {
+                for (Method method : controller.getMethods()) {
+                    if (method.isAnnotationPresent(Get.class)) {
+                        String className = controller.getName();
+                        String methodName = method.getName();
+
+                        Get getAnnotation = method.getAnnotation(Get.class);
+                        String url = getAnnotation.value();
+
+                        Mapping mapping = new Mapping(className, methodName);
+                        
+                        urlMappings.put(url, mapping);
+                    }
                 }
             }
         } catch (ClassNotFoundException | IOException e) {
@@ -54,18 +57,21 @@ public class FrontController extends HttpServlet {
         String url = req.getServletPath();
         PrintWriter out = resp.getWriter();
 
-        resp.setContentType("text/html");
-        out.println("<h1>Sprint 1</h1>");
-        out.println("<p><b>Lien: </b>" + url + "</p>");
-
-        if (isScanned) {
-            int count = 0;
-            for (Class<?> controller : controllers) {
-                count++;
-    
-                out.println("<p><b>Controller " + count + ": </b>" + controller.getName());
-            }
+        Mapping mapping = urlMappings.get(url);
+        if (mapping == null) {
+            resp.setContentType("text/html");
+            out.println("<h1>Erreur: Il n'y a pas de méthode associé à ce chemin!</h1>");
+            return;
         }
+
+        String controllerName = mapping.getClassName();
+        String methodeName = mapping.getMethodName();
+
+        resp.setContentType("text/html");
+        out.println("<h1>Sprint 2</h1>");
+        out.println("<p><b>Lien: </b>" + url + "</p>");
+        out.println("<p><b>Contrôleur: </b>" + controllerName + "</p>");
+        out.println("<p><b>Méthode: </b>" + methodeName + "</p>");
     }
 
 }
