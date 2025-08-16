@@ -1,10 +1,10 @@
 package main.java.com.etu2728.modele;
 
+import java.net.URL;
 import java.io.File;
+import java.util.ArrayList;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.net.URL;
-import java.util.ArrayList;
 
 public class Scanner {
 

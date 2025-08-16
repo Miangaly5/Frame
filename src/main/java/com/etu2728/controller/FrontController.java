@@ -1,14 +1,14 @@
 package main.java.com.etu2728.controller;
 
-import main.java.com.etu2728.modele.Mapping;
 import main.java.com.etu2728.modele.Scanner;
+import main.java.com.etu2728.modele.Mapping;
 import main.java.com.etu2728.annotation.Get;
 import main.java.com.etu2728.annotation.Controller;
 
-import java.util.HashMap;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
+import java.util.HashMap;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -67,11 +67,23 @@ public class FrontController extends HttpServlet {
         String controllerName = mapping.getClassName();
         String methodeName = mapping.getMethodName();
 
-        resp.setContentType("text/html");
-        out.println("<h1>Sprint 2</h1>");
-        out.println("<p><b>Lien: </b>" + url + "</p>");
-        out.println("<p><b>Contrôleur: </b>" + controllerName + "</p>");
-        out.println("<p><b>Méthode: </b>" + methodeName + "</p>");
+        try {
+            Class<?> controllerClass = Class.forName(controllerName);
+            @SuppressWarnings("deprecation")
+            Object controllerInstance = controllerClass.newInstance();
+            Method method = controllerClass.getMethod(methodeName);
+            Object result = method.invoke(controllerInstance);
+
+            resp.setContentType("text/html");
+            out.println("<h1>Sprint 3</h1>");
+            out.println("<p><b>Lien: </b>" + url + "</p>");
+            out.println("<p><b>Contrôleur: </b>" + controllerName + "</p>");
+            out.println("<p><b>Méthode: </b>" + methodeName + "</p>");
+            out.println("<p><b>Résultat: </b>" + result + "</p>");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }
