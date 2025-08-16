@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import main.java.com.etu2728.annotation.Param;
 import main.java.com.etu2728.annotation.ParamObject;
 
+import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.io.IOException;
@@ -107,23 +108,31 @@ public class Scanner {
         for (Parameter parameter : parameters) {
             Object value = null;
     
-            if (parameter.isAnnotationPresent(ParamObject.class)) {
-                ParamObject paramObject = parameter.getAnnotation(ParamObject.class);
-                String paramObjectName = paramObject.value();
+            if (parameter.getType().equals(MySession.class)) {
+                HttpSession session = request.getSession();
+                MySession mySession = new MySession(session);
 
-                value = processObjectParam(parameter.getType(), paramObjectName, request);
-            } else if (parameter.isAnnotationPresent(Param.class)) {
-                Param paramAnnotation = parameter.getAnnotation(Param.class);
-                String paramName = paramAnnotation.name();
-                String paramValue = request.getParameter(paramName);
-
-                value = convertValue(parameter.getType(), paramValue);
-            } else {
-                // Si l'annotation @Param n'est pas présente, on prend le nom du paramètre
-                String paramName = parameter.getName();
-                String paramValue = request.getParameter(paramName);
-                
-                value = convertValue(parameter.getType(), paramValue);
+                value = mySession;
+            }
+            else {
+                if (parameter.isAnnotationPresent(ParamObject.class)) {
+                    ParamObject paramObject = parameter.getAnnotation(ParamObject.class);
+                    String paramObjectName = paramObject.value();
+    
+                    value = processObjectParam(parameter.getType(), paramObjectName, request);
+                } else if (parameter.isAnnotationPresent(Param.class)) {
+                    Param paramAnnotation = parameter.getAnnotation(Param.class);
+                    String paramName = paramAnnotation.name();
+                    String paramValue = request.getParameter(paramName);
+    
+                    value = convertValue(parameter.getType(), paramValue);
+                } else {
+                    // Si l'annotation @Param n'est pas présente, on prend le nom du paramètre
+                    String paramName = parameter.getName();
+                    String paramValue = request.getParameter(paramName);
+                    
+                    value = convertValue(parameter.getType(), paramValue);
+                }
             }
     
             if (value == null) {
