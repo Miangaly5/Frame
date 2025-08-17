@@ -3,7 +3,8 @@ package main.java.com.etu2728.controller;
 import main.java.com.etu2728.modele.Scanner;
 import main.java.com.etu2728.modele.Mapping;
 import main.java.com.etu2728.modele.ModelView;
-import main.java.com.etu2728.annotation.Get;
+import main.java.com.etu2728.annotation.Url;
+import main.java.com.etu2728.annotation.Post;
 import main.java.com.etu2728.annotation.RestApi;
 import main.java.com.etu2728.annotation.Controller;
 
@@ -55,18 +56,25 @@ public class FrontController extends HttpServlet {
         try {
             for (Class<?> controller: Scanner.getControllerClasses(packageName, Controller.class)) {
                 for (Method method : controller.getMethods()) {
-                    if (method.isAnnotationPresent(Get.class)) {
+                    if (method.isAnnotationPresent(Url.class)) {
                         String className = controller.getName();
                         String methodName = method.getName();
+                        String verb = "GET";
 
-                        Get getAnnotation = method.getAnnotation(Get.class);
-                        String url = getAnnotation.value();
-
-                        if (urlMappings.containsKey(url)) {
-                            throw new ServletException("URL en double détectée: " + url);
+                        if (method.isAnnotationPresent(Post.class)) {
+                            verb = "POST";
                         }
 
-                        Mapping mapping = new Mapping(className, methodName);
+                        Url urlAnnotation = method.getAnnotation(Url.class);
+                        String url = urlAnnotation.value();
+                        if (urlMappings.containsKey(url)) {
+                            Mapping mapping = urlMappings.get(url);
+                            if (mapping.getVerb().equals(verb)) {                                
+                                throw new ServletException("URL en double détectée: " + url + " avec le meme verbe!");
+                            }
+                        }
+
+                        Mapping mapping = new Mapping(className, methodName, verb);
                         
                         urlMappings.put(url, mapping);
                     }

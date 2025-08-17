@@ -3,10 +3,14 @@ package main.java.com.etu2728.modele;
 public class Mapping {
     String className;
     String methodName;
+    String verb;
     
-    public Mapping(String className, String methodName) {
+    public Mapping() {
+    }
+    public Mapping(String className, String methodName, String verb) {
         this.className = className;
         this.methodName = methodName;
+        this.verb = verb;
     }
     
     public String getClassName() {
@@ -21,4 +25,11 @@ public class Mapping {
     public void setMethodName(String methodName) {
         this.methodName = methodName;
     }
+    public String getVerb() {
+        return verb;
+    }
+    public void setVerb(String verb) {
+        this.verb = verb;
+    }
+    
 }
