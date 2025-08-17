@@ -4,6 +4,7 @@ import main.java.com.etu2728.modele.Scanner;
 import main.java.com.etu2728.modele.Mapping;
 import main.java.com.etu2728.modele.ModelView;
 import main.java.com.etu2728.annotation.Get;
+import main.java.com.etu2728.annotation.RestApi;
 import main.java.com.etu2728.annotation.Controller;
 
 import java.io.IOException;
@@ -13,6 +14,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.HashMap;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -112,28 +115,45 @@ public class FrontController extends HttpServlet {
             } else {
                 result = method.invoke(controllerInstance);
             }
+    
+            if (method.isAnnotationPresent(RestApi.class)) {
+                resp.setContentType("application/json");
+                ObjectMapper objectMapper = new ObjectMapper();
+                String json;
 
-            if (result instanceof String) {
-                resp.setContentType("text/html");
-                out.println("<h1>Sprint 3</h1>");
-                out.println("<p><b>Lien: </b>" + url + "</p>");
-                out.println("<p><b>Contrôleur: </b>" + controllerName + "</p>");
-                out.println("<p><b>Méthode: </b>" + methodeName + "</p>");
-                out.println("<p><b>Résultat: </b>" + result + "</p>");
-            }
-            else if (result instanceof ModelView) {
-                ModelView modelView = (ModelView)result;
-                String urlView = modelView.getUrl();
-                HashMap<String, Object> data = modelView.getData();
-
-                for (String key : data.keySet()) {
-                    req.setAttribute(key, data.get(key));
+                if (result instanceof ModelView) {
+                    ModelView modelView = (ModelView) result;
+                    json = objectMapper.writeValueAsString(modelView.getData());
+                }
+                else {
+                    json = objectMapper.writeValueAsString(result);
                 }
 
-                req.getRequestDispatcher(urlView).forward(req, resp);
+                out.println(json);
             }
             else {
-                throw new ServletException("Type de retour invalide");
+                if (result instanceof String) {
+                    resp.setContentType("text/html");
+                    out.println("<h1>Sprint 3</h1>");
+                    out.println("<p><b>Lien: </b>" + url + "</p>");
+                    out.println("<p><b>Contrôleur: </b>" + controllerName + "</p>");
+                    out.println("<p><b>Méthode: </b>" + methodeName + "</p>");
+                    out.println("<p><b>Résultat: </b>" + result + "</p>");
+                }
+                else if (result instanceof ModelView) {
+                    ModelView modelView = (ModelView)result;
+                    String urlView = modelView.getUrl();
+                    HashMap<String, Object> data = modelView.getData();
+    
+                    for (String key : data.keySet()) {
+                        req.setAttribute(key, data.get(key));
+                    }
+    
+                    req.getRequestDispatcher(urlView).forward(req, resp);
+                }
+                else {
+                    throw new ServletException("Type de retour invalide");
+                }
             }
 
         } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
