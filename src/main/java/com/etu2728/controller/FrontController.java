@@ -3,6 +3,7 @@ package main.java.com.etu2728.controller;
 import main.java.com.etu2728.modele.Scanner;
 import main.java.com.etu2728.modele.Mapping;
 import main.java.com.etu2728.modele.ModelView;
+import main.java.com.etu2728.modele.ViewException;
 import main.java.com.etu2728.annotation.Url;
 import main.java.com.etu2728.annotation.Post;
 import main.java.com.etu2728.annotation.RestApi;
@@ -25,6 +26,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public class FrontController extends HttpServlet {
     HashMap<String, Mapping> urlMappings = new HashMap<>();
+    Exception error = null;
     
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
@@ -50,7 +52,8 @@ public class FrontController extends HttpServlet {
         String packageName = this.getInitParameter("packageController");
         
         if (packageName == null || packageName.isEmpty()) {
-            throw new ServletException("Le package 'packageController' est vide");
+            error = new ServletException("Le package 'packageController' est vide");
+            return;
         }
 
         try {
@@ -70,7 +73,8 @@ public class FrontController extends HttpServlet {
                         if (urlMappings.containsKey(url)) {
                             Mapping mapping = urlMappings.get(url);
                             if (mapping.getVerb().equals(verb)) {                                
-                                throw new ServletException("URL en double détectée: " + url + " avec le meme verbe!");
+                                error = new ServletException("URL en double détectée: " + url + " avec le meme verbe!");
+                                return;
                             }
                         }
 
@@ -81,7 +85,7 @@ public class FrontController extends HttpServlet {
                 }
             }
         } catch (ClassNotFoundException | IOException e) {
-            throw new ServletException("Erreur lors du scan des contrôleurs", e);
+            error = new ServletException("Erreur lors du scan des contrôleurs", e);
         }
     }
 
@@ -89,9 +93,14 @@ public class FrontController extends HttpServlet {
         String url = req.getServletPath();
         PrintWriter out = resp.getWriter();
 
+        if (error != null) {
+            ViewException.sendException(error, req, resp);
+        }
+
         Mapping mapping = urlMappings.get(url);
         if (mapping == null) {
-            throw new ServletException("Aucune methode associe a ce chemin");
+            error = new ServletException("Aucune methode associe a ce chemin " + url);
+            ViewException.sendException(error, req, resp);
         }
 
         String controllerName = mapping.getClassName();
@@ -109,7 +118,8 @@ public class FrontController extends HttpServlet {
                 }
             }
             if (method == null) {
-                throw new ServletException("Methode introuvable: " + methodeName);
+                error = new ServletException("Methode introuvable: " + methodeName);
+                ViewException.sendException(error, req, resp);
             }
     
             Object result;
@@ -117,7 +127,8 @@ public class FrontController extends HttpServlet {
             if (parameters.length > 0) {
                 ArrayList<Object> values = Scanner.parameterMethod(method, req);
                 if (values.size() != parameters.length) {
-                    throw new ServletException("Nombre d'arguments incorrect pour la méthode " + method);
+                    error = new ServletException("Nombre d'arguments incorrect pour la méthode " + method);
+                    ViewException.sendException(error, req, resp);
                 }
                 result = method.invoke(controllerInstance, values.toArray());
             } else {
@@ -160,12 +171,14 @@ public class FrontController extends HttpServlet {
                     req.getRequestDispatcher(urlView).forward(req, resp);
                 }
                 else {
-                    throw new ServletException("Type de retour invalide");
+                    error = new ServletException("Type de retour invalide");
+                    ViewException.sendException(error, req, resp);
                 }
             }
 
         } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
-            throw new ServletException("Erreur lors de l'execution de la methode", e);
+            error = new ServletException("Erreur lors de l'execution de la methode", e);
+            ViewException.sendException(e, req, resp);
         }
     }
 
