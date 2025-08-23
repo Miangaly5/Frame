@@ -7,14 +7,15 @@ import java.util.ArrayList;
 import main.java.com.etu2728.annotation.Param;
 import main.java.com.etu2728.annotation.ParamObject;
 
+import jakarta.servlet.http.Part;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.io.IOException;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.annotation.Annotation;
 
 public class Scanner {
 
@@ -108,7 +109,31 @@ public class Scanner {
         for (Parameter parameter : parameters) {
             Object value = null;
     
-            if (parameter.getType().equals(MySession.class)) {
+            if (parameter.getType().equals(MultiPart.class)) {
+                String paramName = parameter.getName();
+                if (parameter.isAnnotationPresent(Param.class)) {
+                    Param param = parameter.getAnnotation(Param.class);
+                    paramName = param.name();
+                }
+                
+                Part part = request.getPart(paramName);
+                MultiPart multipart = null;
+
+                if (part == null) {
+                    throw new NullPointerException("Le champ '" + paramName + "' est null.");
+                }
+
+                multipart = new MultiPart(
+                    part.getSubmittedFileName(),
+                    part.getSize(), 
+                    part.getContentType(), 
+                    part.getInputStream()
+                );
+                
+                value = multipart;
+                
+            }
+            else if (parameter.getType().equals(MySession.class)) {
                 HttpSession session = request.getSession();
                 MySession mySession = new MySession(session);
 
