@@ -1,9 +1,9 @@
 package main.java.com.etu2728.controller;
 
 import main.java.com.etu2728.modele.Scanner;
+import main.java.com.etu2728.modele.ViewException;
 import main.java.com.etu2728.modele.Mapping;
 import main.java.com.etu2728.modele.ModelView;
-import main.java.com.etu2728.modele.ViewException;
 import main.java.com.etu2728.annotation.Url;
 import main.java.com.etu2728.annotation.Post;
 import main.java.com.etu2728.annotation.RestApi;
@@ -23,7 +23,13 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.annotation.MultipartConfig;
 
+@MultipartConfig(
+    fileSizeThreshold = 1024 * 1024 * 2, // 2MB avant stockage temporaire
+    maxFileSize = 1024 * 1024 * 10,      // 10MB max par fichier
+    maxRequestSize = 1024 * 1024 * 50    // 50MB max par requête
+)
 public class FrontController extends HttpServlet {
     HashMap<String, Mapping> urlMappings = new HashMap<>();
     Exception error = null;
